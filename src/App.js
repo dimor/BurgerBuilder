@@ -1,26 +1,69 @@
-import React from 'react';
-import logo from './logo.svg';
-import './App.css';
+import React, { useEffect, Suspense } from 'react';
+import Layout from './containers/Layout/Layout';
+import BurgerBuilder from './containers/BurgerBuilder/BurgerBuilder';
+import { Route, Switch, Redirect } from 'react-router-dom';
+import Auth from './containers/Auth/Auth';
+import Logout from './containers/Auth/Logout/Logout';
+import { connect } from 'react-redux';
+import * as actions from './store/actions/index';
+import Spinner from './components/UI/Spinner/Spinner';
 
-function App() {
+
+
+const Checkout = React.lazy(() => import('./containers/Checkout/Checkout'));
+const Orders = React.lazy(() => import('./containers/Orders/Orders'));
+
+const App = props => {
+
+  const { onTryAutoSignup, isAuthenticated } = props;
+
+  useEffect(() => {
+    onTryAutoSignup();
+  }, [onTryAutoSignup]);
+
+
+  let routes = (
+    <Switch>
+      <Route path="/auth" component={Auth} />
+      <Route path="/" component={BurgerBuilder} />
+      <Redirect to="/" />
+    </Switch>
+  );
+
+  if (isAuthenticated) {
+    routes = (
+      <Switch>
+        <Route path="/checkout" render={() => <Checkout />} />
+        <Route path="/orders" render={() => <Orders />} />
+        <Route path="/logout" component={Logout} />
+        <Route path="/auth" component={Auth} />
+        <Route path="/" component={BurgerBuilder} />
+        <Redirect to="/" />
+      </Switch>
+    )
+  }
+
+
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+    <div>
+      <Layout>
+        <Suspense fallback={<Spinner />}> {routes} </Suspense>
+      </Layout>
     </div>
   );
 }
 
-export default App;
+
+const mapStateToProps = state => {
+  return {
+    isAuthenticated: state.auth.token !== null
+  }
+}
+
+const mapDispatchToProps = dispath => {
+  return {
+    onTryAutoSignup: () => dispath(actions.authCheckState())
+  }
+}
+
+export default connect(mapStateToProps, mapDispatchToProps)(App);
